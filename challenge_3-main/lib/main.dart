@@ -1,20 +1,23 @@
-import 'package:challenge3/ui/home_screen.dart';
 import 'package:flutter/material.dart';
+import 'ui/home_screen.dart';
 
 void main() {
-  runApp(const FlipCardGame());
+  runApp(const MyApp());
 }
 
-class FlipCardGame extends StatelessWidget {
-  const FlipCardGame({super.key});
-
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flip Card Memory Game',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: HomeScreen(),
-      debugShowCheckedModeBanner: false,
+      title: 'Flip Cards Memory Game',
+      theme: ThemeData(
+        // <-- Use LuckiestGuy everywhere
+        fontFamily: 'LuckiestGuy',
+        // You can also customize textTheme if needed:
+        // textTheme: Theme.of(context).textTheme.apply(fontFamily: 'LuckiestGuy'),
+      ),
+      home: const HomeScreen(),
     );
   }
 }

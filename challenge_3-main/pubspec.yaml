@@ -76,6 +76,10 @@ flutter:
     - assets/images/fruits/green_apple.png
     - assets/images/fruits/orange.png
     - assets/images/fruits/pear.png
+  fonts:
+    - family: LuckiestGuy
+      fonts:
+        - asset: assets/fonts/LuckiestGuy-Regular.ttf
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
