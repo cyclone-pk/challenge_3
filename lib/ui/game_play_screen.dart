@@ -1,12 +1,9 @@
-// lib/ui/game_play_screen.dart
-
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../config/card_images.dart';
 
 class GameScreen extends StatefulWidget {
-  /// Starting level (1, 2 or 3)
   final int startingLevel;
   const GameScreen({super.key, this.startingLevel = 1});
 
@@ -64,9 +61,8 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _onCardTap(int index) {
-    if (cardFlipped[index] ||
-        selectedIndices.length == 2 ||
-        cardMatched[index]) return;
+    if (cardFlipped[index] || selectedIndices.length == 2 || cardMatched[index])
+      return;
 
     setState(() {
       cardFlipped[index] = true;
@@ -87,7 +83,7 @@ class _GameScreenState extends State<GameScreen> {
         final bGlobal = bBox.localToGlobal(bBox.size.center(Offset.zero));
 
         final stackBox =
-        stackKey.currentContext!.findRenderObject() as RenderBox;
+            stackKey.currentContext!.findRenderObject() as RenderBox;
         setState(() {
           lineStart = stackBox.globalToLocal(aGlobal);
           lineEnd = stackBox.globalToLocal(bGlobal);
@@ -131,7 +127,8 @@ class _GameScreenState extends State<GameScreen> {
               level = isFinal ? 1 : level + 1;
               _initializeGame();
             },
-            child: Text(isFinal ? 'Restart Level 1' : 'Go to Level ${level + 1}'),
+            child:
+                Text(isFinal ? 'Restart Level 1' : 'Go to Level ${level + 1}'),
           )
         ],
       ),
@@ -199,19 +196,17 @@ class _GameScreenState extends State<GameScreen> {
     // Calculate available width & height for the grid
     final mq = MediaQuery.of(context);
     final W = mq.size.width - 16; // horizontal padding
-    final H = mq.size.height
-        - kToolbarHeight
-        - mq.padding.top
-        - mq.padding.bottom
-        - 16; // vertical padding
+    final H = mq.size.height -
+        kToolbarHeight -
+        mq.padding.top -
+        mq.padding.bottom -
+        16; // vertical padding
 
     // Default grid metrics
-    final defaultCols =
-    max(1, (W + _spacing) ~/ (_defaultCardW + _spacing));
+    final defaultCols = max(1, (W + _spacing) ~/ (_defaultCardW + _spacing));
     final defaultRows = (cardData.length / defaultCols).ceil();
-    final totalDefaultH =
-        defaultRows * (_defaultCardW / _defaultAspect) +
-            (defaultRows - 1) * _spacing;
+    final totalDefaultH = defaultRows * (_defaultCardW / _defaultAspect) +
+        (defaultRows - 1) * _spacing;
 
     // Choose default or auto-fit layout
     int cols;

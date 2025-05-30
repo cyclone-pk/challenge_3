@@ -12,10 +12,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flip Cards Memory Game',
       theme: ThemeData(
-        // <-- Use LuckiestGuy everywhere
         fontFamily: 'LuckiestGuy',
-        // You can also customize textTheme if needed:
-        // textTheme: Theme.of(context).textTheme.apply(fontFamily: 'LuckiestGuy'),
       ),
       home: const HomeScreen(),
     );
