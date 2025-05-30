@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../config/card_images.dart';
 
 class GameScreen extends StatefulWidget {
+  /// Starting level (1, 2 or 3)
   final int startingLevel;
   const GameScreen({super.key, this.startingLevel = 1});
 
@@ -14,15 +15,23 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> {
+  // Default card size parameters
+  static const double _defaultCardW = 100;
+  static const double _defaultAspect = 0.8;
+  static const double _spacing = 8;
+
+  // Level state
   late int level;
   final Map<int, int> fruitsPerLevel = {1: 2, 2: 6, 3: 15};
 
+  // Card data & flip/match state
   late List<String> cardData;
   List<bool> cardFlipped = [];
   List<bool> cardMatched = [];
   List<int> selectedIndices = [];
   int matchedPairs = 0;
 
+  // For drawing the connecting line
   final Map<int, GlobalKey> cardKeys = {};
   final GlobalKey stackKey = GlobalKey();
   Offset? lineStart, lineEnd;
@@ -35,6 +44,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _initializeGame() {
+    // Pick N random fruit assets for this level
     final fruits = CardImages.pickRandom(fruitsPerLevel[level]!);
     cardData = [...fruits, ...fruits]..shuffle(Random());
 
@@ -44,10 +54,12 @@ class _GameScreenState extends State<GameScreen> {
     matchedPairs = 0;
     lineStart = lineEnd = null;
 
+    // Assign a GlobalKey to each card to find its position
     cardKeys.clear();
     for (var i = 0; i < cardData.length; i++) {
       cardKeys[i] = GlobalKey();
     }
+
     setState(() {});
   }
 
@@ -62,6 +74,7 @@ class _GameScreenState extends State<GameScreen> {
     });
 
     if (selectedIndices.length == 2) {
+      // After layout, compute line endpoints
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final aBox = cardKeys[selectedIndices[0]]!
             .currentContext!
@@ -69,8 +82,10 @@ class _GameScreenState extends State<GameScreen> {
         final bBox = cardKeys[selectedIndices[1]]!
             .currentContext!
             .findRenderObject() as RenderBox;
+
         final aGlobal = aBox.localToGlobal(aBox.size.center(Offset.zero));
         final bGlobal = bBox.localToGlobal(bBox.size.center(Offset.zero));
+
         final stackBox =
         stackKey.currentContext!.findRenderObject() as RenderBox;
         setState(() {
@@ -79,6 +94,7 @@ class _GameScreenState extends State<GameScreen> {
         });
       });
 
+      // Delay then check match
       Future.delayed(const Duration(milliseconds: 800), () {
         final i = selectedIndices[0], j = selectedIndices[1];
         if (cardData[i] == cardData[j]) {
@@ -88,7 +104,9 @@ class _GameScreenState extends State<GameScreen> {
           cardFlipped[i] = cardFlipped[j] = false;
         }
         selectedIndices.clear();
-        setState(() => lineStart = lineEnd = null);
+        setState(() {
+          lineStart = lineEnd = null;
+        });
 
         if (matchedPairs == fruitsPerLevel[level]) {
           _showLevelDialog();
@@ -102,11 +120,10 @@ class _GameScreenState extends State<GameScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title:
-        Text(isFinal ? 'All Levels Complete!' : 'Level $level Complete'),
+        title: Text(isFinal ? 'All Levels Complete!' : 'Level $level Complete'),
         content: Text(isFinal
             ? 'You’ve matched every fruit! Restart at Level 1?'
-            : 'Great! Proceed to Level ${level + 1}?'),
+            : 'Great job! Proceed to Level ${level + 1}?'),
         actions: [
           TextButton(
             onPressed: () {
@@ -114,32 +131,40 @@ class _GameScreenState extends State<GameScreen> {
               level = isFinal ? 1 : level + 1;
               _initializeGame();
             },
-            child: Text(
-                isFinal ? 'Restart Level 1' : 'Go to Level ${level + 1}'),
+            child: Text(isFinal ? 'Restart Level 1' : 'Go to Level ${level + 1}'),
           )
         ],
       ),
     );
   }
 
+  /// Computes grid params so N cards fill W×H exactly.
+  GridParams _computeGrid(double W, double H, int N) {
+    if (N == 0 || W == 0 || H == 0) return GridParams(1, 1, 1.0);
+    final aspect = W / H;
+    final rawCols = sqrt(N * aspect);
+    final cols = max(1, rawCols.floor());
+    final rows = (N / cols).ceil();
+    final cellW = W / cols;
+    final cellH = H / rows;
+    final childAspect = cellW / cellH;
+    return GridParams(cols, rows, childAspect);
+  }
+
   Widget _buildCard(int index) {
     if (cardMatched[index]) return const SizedBox();
-
     final isFlipped = cardFlipped[index];
-
     return GestureDetector(
       onTap: () => _onCardTap(index),
       child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 600),
-        transitionBuilder: (Widget child, Animation<double> animation) {
-          // Animate from pi to 0 on Y axis
-          final rotate = Tween(begin: pi, end: 0.0).animate(animation);
+        duration: const Duration(milliseconds: 400),
+        transitionBuilder: (child, anim) {
+          final rotate = Tween(begin: pi, end: 0.0).animate(anim);
           return AnimatedBuilder(
             animation: rotate,
             child: child,
-            builder: (context, child) {
+            builder: (_, child) {
               final isUnder = (ValueKey(isFlipped) != child!.key);
-              // slight tilt for realism
               var tilt = (rotate.value - pi / 2).abs() - pi / 2;
               tilt *= isUnder ? -0.003 : 0.003;
               final matrix = Matrix4.rotationY(rotate.value)
@@ -152,10 +177,6 @@ class _GameScreenState extends State<GameScreen> {
             },
           );
         },
-        layoutBuilder: (widget, list) =>
-            Stack(children: [widget!, ...list]),
-        switchInCurve: Curves.easeInBack,
-        switchOutCurve: Curves.easeInBack,
         child: Container(
           key: ValueKey(isFlipped),
           decoration: BoxDecoration(
@@ -163,7 +184,8 @@ class _GameScreenState extends State<GameScreen> {
             border: Border.all(color: Colors.white, width: 2),
             image: DecorationImage(
               image: AssetImage(
-                  isFlipped ? cardData[index] : CardImages.cardBack),
+                isFlipped ? cardData[index] : CardImages.cardBack,
+              ),
               fit: BoxFit.cover,
             ),
           ),
@@ -174,42 +196,86 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final crossCount = MediaQuery.sizeOf(context).width ~/ 100;
+    // Calculate available width & height for the grid
+    final mq = MediaQuery.of(context);
+    final W = mq.size.width - 16; // horizontal padding
+    final H = mq.size.height
+        - kToolbarHeight
+        - mq.padding.top
+        - mq.padding.bottom
+        - 16; // vertical padding
+
+    // Default grid metrics
+    final defaultCols =
+    max(1, (W + _spacing) ~/ (_defaultCardW + _spacing));
+    final defaultRows = (cardData.length / defaultCols).ceil();
+    final totalDefaultH =
+        defaultRows * (_defaultCardW / _defaultAspect) +
+            (defaultRows - 1) * _spacing;
+
+    // Choose default or auto-fit layout
+    int cols;
+    double childAspect;
+    if (totalDefaultH <= H) {
+      cols = defaultCols;
+      childAspect = _defaultAspect;
+    } else {
+      final params = _computeGrid(W, H, cardData.length);
+      cols = params.cols;
+      childAspect = params.childAspect;
+    }
+
     return Scaffold(
-      backgroundColor: Colors.indigo[900],
-      appBar: AppBar(title: Text('Level ${level} – Match the Fruits')),
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        title: Text('Level ${level} – Match the Fruits'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: Stack(
         key: stackKey,
         children: [
+          // Full-screen game background
           Positioned.fill(
             child: Image.asset(
               'assets/images/game_background.png',
               fit: BoxFit.cover,
             ),
           ),
+
+          // Grid of cards
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(8),
             child: GridView.builder(
-              gridDelegate:
-              SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossCount,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: .8,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: cols,
+                childAspectRatio: childAspect,
+                crossAxisSpacing: _spacing,
+                mainAxisSpacing: _spacing,
               ),
               itemCount: cardData.length,
               itemBuilder: (_, i) => _buildCard(i),
             ),
           ),
+
+          // Connecting line
           if (lineStart != null && lineEnd != null)
             Positioned.fill(
-              child:
-              CustomPaint(painter: _LinePainter(lineStart!, lineEnd!)),
+              child: CustomPaint(
+                painter: _LinePainter(lineStart!, lineEnd!),
+              ),
             ),
         ],
       ),
     );
   }
+}
+
+class GridParams {
+  final int cols, rows;
+  final double childAspect;
+  GridParams(this.cols, this.rows, this.childAspect);
 }
 
 class _LinePainter extends CustomPainter {
