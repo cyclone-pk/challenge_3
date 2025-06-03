@@ -10,9 +10,7 @@ class HomeScreen extends StatelessWidget {
   void _startGame(BuildContext context, int level) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => GameScreen(startingLevel: level),
-      ),
+      MaterialPageRoute(builder: (_) => GameScreen(startingLevel: level)),
     );
   }
 
