@@ -8,7 +8,7 @@ class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   void _startGame(BuildContext context, int level) {
-    Navigator.pushReplacement(
+    Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => GameScreen(startingLevel: level),
@@ -62,7 +62,7 @@ class HomeScreen extends StatelessWidget {
                 onPressed: _exitGame,
                 style: ElevatedButton.styleFrom(
                   padding:
-                  const EdgeInsets.symmetric(horizontal: 48, vertical: 14),
+                      const EdgeInsets.symmetric(horizontal: 48, vertical: 14),
                   backgroundColor: Colors.red.withOpacity(0.8),
                 ),
                 child: const Text(
