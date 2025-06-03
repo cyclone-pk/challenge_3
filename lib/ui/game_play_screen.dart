@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'dart:ui';
+import 'package:challenge3/config/grid_config.dart';
 import 'package:flutter/material.dart';
 import '../config/card_images.dart';
 
@@ -31,7 +32,6 @@ class _GameScreenState extends State<GameScreen> {
   // For drawing the connecting line
   final Map<int, GlobalKey> cardKeys = {};
   final GlobalKey stackKey = GlobalKey();
-  Offset? lineStart, lineEnd;
 
   @override
   void initState() {
@@ -41,7 +41,6 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _initializeGame() {
-    // Pick N random fruit assets for this level
     final fruits = CardImages.pickRandom(fruitsPerLevel[level]!);
     cardData = [...fruits, ...fruits]..shuffle(Random());
 
@@ -49,9 +48,7 @@ class _GameScreenState extends State<GameScreen> {
     cardMatched = List.filled(cardData.length, false);
     selectedIndices.clear();
     matchedPairs = 0;
-    lineStart = lineEnd = null;
 
-    // Assign a GlobalKey to each card to find its position
     cardKeys.clear();
     for (var i = 0; i < cardData.length; i++) {
       cardKeys[i] = GlobalKey();
@@ -70,26 +67,6 @@ class _GameScreenState extends State<GameScreen> {
     });
 
     if (selectedIndices.length == 2) {
-      // After layout, compute line endpoints
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final aBox = cardKeys[selectedIndices[0]]!
-            .currentContext!
-            .findRenderObject() as RenderBox;
-        final bBox = cardKeys[selectedIndices[1]]!
-            .currentContext!
-            .findRenderObject() as RenderBox;
-
-        final aGlobal = aBox.localToGlobal(aBox.size.center(Offset.zero));
-        final bGlobal = bBox.localToGlobal(bBox.size.center(Offset.zero));
-
-        final stackBox =
-            stackKey.currentContext!.findRenderObject() as RenderBox;
-        setState(() {
-          lineStart = stackBox.globalToLocal(aGlobal);
-          lineEnd = stackBox.globalToLocal(bGlobal);
-        });
-      });
-
       // Delay then check match
       Future.delayed(const Duration(milliseconds: 800), () {
         final i = selectedIndices[0], j = selectedIndices[1];
@@ -100,9 +77,7 @@ class _GameScreenState extends State<GameScreen> {
           cardFlipped[i] = cardFlipped[j] = false;
         }
         selectedIndices.clear();
-        setState(() {
-          lineStart = lineEnd = null;
-        });
+        setState(() {});
 
         if (matchedPairs == fruitsPerLevel[level]) {
           _showLevelDialog();
@@ -135,7 +110,6 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  /// Computes grid params so N cards fill W×H exactly.
   GridParams _computeGrid(double W, double H, int N) {
     if (N == 0 || W == 0 || H == 0) return GridParams(1, 1, 1.0);
     final aspect = W / H;
@@ -259,10 +233,4 @@ class _GameScreenState extends State<GameScreen> {
       ),
     );
   }
-}
-
-class GridParams {
-  final int cols, rows;
-  final double childAspect;
-  GridParams(this.cols, this.rows, this.childAspect);
 }
