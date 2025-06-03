@@ -223,9 +223,11 @@ class _GameScreenState extends State<GameScreen> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
+        automaticallyImplyLeading: true,
         title: Text('Level ${level} – Match the Fruits'),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        actions: [Text('Score :$matchedPairs   ')],
       ),
       body: Stack(
         key: stackKey,
