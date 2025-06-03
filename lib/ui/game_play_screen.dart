@@ -255,14 +255,6 @@ class _GameScreenState extends State<GameScreen> {
               itemBuilder: (_, i) => _buildCard(i),
             ),
           ),
-
-          // Connecting line
-          if (lineStart != null && lineEnd != null)
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _LinePainter(lineStart!, lineEnd!),
-              ),
-            ),
         ],
       ),
     );
@@ -273,22 +265,4 @@ class GridParams {
   final int cols, rows;
   final double childAspect;
   GridParams(this.cols, this.rows, this.childAspect);
-}
-
-class _LinePainter extends CustomPainter {
-  final Offset start, end;
-  _LinePainter(this.start, this.end);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.yellowAccent
-      ..strokeWidth = 4
-      ..style = PaintingStyle.stroke;
-    canvas.drawLine(start, end, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _LinePainter old) =>
-      old.start != start || old.end != end;
 }
