@@ -1,0 +1,2 @@
+D:/5450/challenge_3-main/challenge_3-main/android/app/.cxx/Debug/1t4dr1b1/x86_64/CMakeFiles/edit_cache.dir
+D:/5450/challenge_3-main/challenge_3-main/android/app/.cxx/Debug/1t4dr1b1/x86_64/CMakeFiles/rebuild_cache.dir
