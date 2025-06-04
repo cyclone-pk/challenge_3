@@ -1,8 +1,26 @@
+// lib/ui/game_play_screen.dart
+
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
 import 'package:challenge3/config/grid_config.dart';
 import 'package:flutter/material.dart';
 import '../config/card_images.dart';
+
+/// Manages coins for the entire session.
+class CoinManager {
+  static int coins = 20; // starting amount
+  static const int revealCost = 5;
+
+  /// Spend coins to reveal cards. Returns true if spent.
+  static bool spendForReveal() {
+    if (coins >= revealCost) {
+      coins -= revealCost;
+      return true;
+    }
+    return false;
+  }
+}
 
 class GameScreen extends StatefulWidget {
   final int startingLevel;
@@ -13,25 +31,22 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> {
-  // Default card size parameters
   static const double _defaultCardW = 100;
   static const double _defaultAspect = 0.8;
   static const double _spacing = 8;
 
-  // Level state
   late int level;
   final Map<int, int> fruitsPerLevel = {1: 2, 2: 6, 3: 15};
 
-  // Card data & flip/match state
   late List<String> cardData;
   List<bool> cardFlipped = [];
   List<bool> cardMatched = [];
   List<int> selectedIndices = [];
   int matchedPairs = 0;
 
-  // For drawing the connecting line
   final Map<int, GlobalKey> cardKeys = {};
   final GlobalKey stackKey = GlobalKey();
+  Offset? lineStart, lineEnd;
 
   @override
   void initState() {
@@ -48,6 +63,7 @@ class _GameScreenState extends State<GameScreen> {
     cardMatched = List.filled(cardData.length, false);
     selectedIndices.clear();
     matchedPairs = 0;
+    lineStart = lineEnd = null;
 
     cardKeys.clear();
     for (var i = 0; i < cardData.length; i++) {
@@ -58,8 +74,9 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _onCardTap(int index) {
-    if (cardFlipped[index] || selectedIndices.length == 2 || cardMatched[index])
+    if (cardFlipped[index] || selectedIndices.length == 2 || cardMatched[index]) {
       return;
+    }
 
     setState(() {
       cardFlipped[index] = true;
@@ -67,12 +84,15 @@ class _GameScreenState extends State<GameScreen> {
     });
 
     if (selectedIndices.length == 2) {
-      // Delay then check match
       Future.delayed(const Duration(milliseconds: 800), () {
         final i = selectedIndices[0], j = selectedIndices[1];
         if (cardData[i] == cardData[j]) {
+          // Correct match → mark matched and increment coin
           cardMatched[i] = cardMatched[j] = true;
           matchedPairs++;
+
+          // ADD THIS LINE to give 1 coin per correct match:
+          CoinManager.coins += 1;
         } else {
           cardFlipped[i] = cardFlipped[j] = false;
         }
@@ -102,8 +122,7 @@ class _GameScreenState extends State<GameScreen> {
               level = isFinal ? 1 : level + 1;
               _initializeGame();
             },
-            child:
-                Text(isFinal ? 'Restart Level 1' : 'Go to Level ${level + 1}'),
+            child: Text(isFinal ? 'Restart Level 1' : 'Go to Level ${level + 1}'),
           )
         ],
       ),
@@ -165,24 +184,56 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  /// Reveal all unmatched cards for [durationMs] ms, spending 5 coins.
+  void _revealAllCardsTemporarily(int durationMs) {
+    if (!CoinManager.spendForReveal()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Not enough coins to reveal!')),
+      );
+      return;
+    }
+
+    // Flip all unmatched cards face‐up
+    final toReveal = <int>[];
+    for (var i = 0; i < cardData.length; i++) {
+      if (!cardMatched[i] && !cardFlipped[i]) {
+        toReveal.add(i);
+      }
+    }
+    if (toReveal.isEmpty) return;
+
+    setState(() {
+      for (var idx in toReveal) {
+        cardFlipped[idx] = true;
+      }
+    });
+
+    Future.delayed(Duration(milliseconds: durationMs), () {
+      setState(() {
+        for (var idx in toReveal) {
+          if (!cardMatched[idx]) {
+            cardFlipped[idx] = false;
+          }
+        }
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Calculate available width & height for the grid
     final mq = MediaQuery.of(context);
-    final W = mq.size.width - 16; // horizontal padding
+    final W = mq.size.width - 16;
     final H = mq.size.height -
         kToolbarHeight -
         mq.padding.top -
         mq.padding.bottom -
-        16; // vertical padding
+        16;
 
-    // Default grid metrics
     final defaultCols = max(1, (W + _spacing) ~/ (_defaultCardW + _spacing));
     final defaultRows = (cardData.length / defaultCols).ceil();
-    final totalDefaultH = defaultRows * (_defaultCardW / _defaultAspect) +
-        (defaultRows - 1) * _spacing;
+    final totalDefaultH =
+        defaultRows * (_defaultCardW / _defaultAspect) + (defaultRows - 1) * _spacing;
 
-    // Choose default or auto-fit layout
     int cols;
     double childAspect;
     if (totalDefaultH <= H) {
@@ -198,23 +249,54 @@ class _GameScreenState extends State<GameScreen> {
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         automaticallyImplyLeading: true,
-        title: Text('Level ${level} – Match the Fruits'),
+        title: Text('Level $level – Match the Fruits'),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        actions: [Text('Score :$matchedPairs   ')],
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            child: GestureDetector(
+              onTap: () {
+                // Spend coins to reveal all cards for 1 second
+                _revealAllCardsTemporarily(1000);
+                setState(() {});
+              },
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.monetization_on, color: Colors.yellowAccent),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Coins: ${CoinManager.coins}',
+                        style: const TextStyle(fontSize: 18, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'Click Coin to reveal fruit',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
       body: Stack(
         key: stackKey,
         children: [
-          // Full-screen game background
           Positioned.fill(
             child: Image.asset(
               'assets/images/game_background.png',
               fit: BoxFit.cover,
             ),
           ),
-
-          // Grid of cards
           Padding(
             padding: const EdgeInsets.all(8),
             child: GridView.builder(
